@@ -99,8 +99,32 @@ pack.implement
         first++
         @delay 25
       @key 'right', 'command shift'
-  'editor:extend-selection-to-line-number': (input) -> 
-    @notify 'Not supported.'
+  'editor:extend-selection-to-line-number': (input) ->
+    if input
+      clipboard = @getClipboard()
+      @key 'l', 'command'
+      @delay 100
+      @do 'clipboard:copy'
+      @delay 25
+      @key 'escape'
+      copied = _.split @getClipboard(), ':'
+      currentLineNumber = parseInt(copied[0])
+      target = parseInt(input)
+      if currentLineNumber < target
+        counter = currentLineNumber
+        while counter < target
+          @key 'down', 'shift'
+          @delay 25
+          counter++
+        @key 'right', 'command shift'
+      else
+        counter = target
+        while counter < currentLineNumber
+          @key 'up', 'shift'
+          @delay 25
+          counter++
+        @key 'left', 'command shift'
+      @setClipboard(clipboard)
   'editor:select-line-number': (input) ->
     @do 'editor:move-to-line-number', input
     @delay 50
