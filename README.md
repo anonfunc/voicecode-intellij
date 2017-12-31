@@ -23,7 +23,7 @@ By default, this is `~/voicecode`, so:
 - Additionally, for whatever reason, VoiceCode's @key command doesn't work consistently, so some of the keys are automated via key code, which is painful to maintain.
 - The scope does not include any IDEA family IDE besides IntelliJ community edition.  Please open a pull request with the appropriate bundle ID if you have it.
 - The template command `quinn` has a specific set of template names, none of which match with IntelliJ's included templates.
-- Stomps on bookmark 0, if set.  Bookmark 0 is used to store original cursor location for commands like `clonesert`.
+- Stomps on bookmark 0, if set.  Bookmark 0 is used to store original cursor location for commands like `clonesert`.  (Should replace with getting current position via Cmd-L and then modifying the line number based on operation.)
 
 # Credits
 

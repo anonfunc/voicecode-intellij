@@ -25,6 +25,21 @@ pack.implement
   'object:duplicate': ->
     # Cmd-D
     @applescript 'tell application "System Events" to key code 2 using command down'
+  'object:backward': ->
+    # Previous edit location
+    @key '[', 'command'
+  'object:forward': ->
+    # Next edit location
+    @key ']', 'command'
+  'object:refresh': ->
+    # Synchronize.
+    @key 'y', 'command option'
+  'object:next': ->
+    # Next method?
+    @key 'down', 'control'
+  'object:previous': ->
+    # Previous method?
+    @key 'up', 'control'
   'editor:toggle-comments': ->
     # Cmd-/
     @applescript 'tell application "System Events" to key code 44 using command down'
@@ -145,3 +160,47 @@ pack.implement
     @key 'right', 'command'
     @delay 25
     @key 'enter'
+  'editor:list-projects': ->
+    # Recent files, not projects.
+    @key 'e', 'command'
+  'delete:lines': (input) ->
+    console.log input.first
+    if input
+      # Store current line: Opt-F3, 0
+      @applescript 'tell application "System Events" to key code 99 using option down'
+      @delay 50
+      @applescript 'tell application "System Events" to key code 29'
+      @delay 50
+      first = input.first
+      if 'last' in input
+        # No idea how this is triggered.
+        @do 'editor:select-line-number-range', '' + first + last
+      else
+        @do 'editor:move-to-line-number', first
+      @delay 100
+      @key 'delete', 'command'
+      @delay 25
+      # Jump to original line: Ctrl-0
+      @applescript 'tell application "System Events" to key code 29 using control down'
+      @delay 50
+    else
+      @key 'delete', 'command'
+
+pack.command 'intellij-complete',
+  spoken: 'comply'
+  description: 'Trigger completion.'
+  action: ->
+    @key 'space', 'control'
+
+pack.command 'intellij-smart-complete',
+  spoken: 'schmaltz'
+  description: 'Trigger smart completion.  Do it again to search deeper.'
+  action: ->
+    @key 'space', 'control shift'
+
+pack.command 'intellij-smart-finish',
+  spoken: 'finagle'
+  description: 'Smart finish.  Balances parens, braces, etc.'
+  action: ->
+    @key 'enter', 'control shift'
+
