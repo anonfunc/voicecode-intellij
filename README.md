@@ -1,0 +1,3 @@
+# IntelliJ support for VoiceCode
+
+
