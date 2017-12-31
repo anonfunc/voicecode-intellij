@@ -1,3 +1,27 @@
 # IntelliJ support for VoiceCode
 
+This adds [VoiceCode](https://voicecode.io) support for IntelliJ, implementing all `editor` commands which make sense (except for `seltil`).
 
+## Installation
+
+### Make required IntelliJ config changes:
+
+- [Disable cut/copy acting without an active selection.](https://stackoverflow.com/questions/32895522/disable-copying-entire-line-when-nothing-is-selected-in-intellij)
+- Change keymap to `Mac OS X 10.5+`.
+
+### Clone this repo into the Voicecode home directory
+
+By default, this is `~/voicecode`, so:
+
+    git clone https://github.com/anonfunc/voicecode-intellij.git ~/voicecode/intellij
+    
+### You should not need to restart VoiceCode, but if it doesn't work... restart VoiceCode.
+
+## Limitations
+
+- Uses nothing but keyboard shortcuts, so is keyboard mapping dependent.  
+- Additionally, for whatever reason, VoiceCode's @key command doesn't work consistently, so some of the keys are automated via key code, which is painful to maintain.
+- `seltil` is not supported, as there is no way to select to a given line via keyboard shortcuts or actions.
+- The scope does not include any IDEA family IDE besides IntelliJ community edition.  Please open a pull request with the appropriate bundle ID if you have it.
+- The template command `quinn` has a specific set of template names, none of which match with IntelliJ's included templates.
+- Stomps on bookmark 0, if set.  Bookmark 0 is used to store original cursor location for commands like `clonesert`.
