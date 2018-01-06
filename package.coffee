@@ -2,18 +2,40 @@
 
 pack = Packages.register
   name: 'intellij'
-  description: 'Jetbrains IntelliJ IDEA integration'
+  description: 'Jetbrains IntelliJ IDEA (and friends) integration'
 
 Scope.register
   name: "intellij"
   applications: [
-    'com.jetbrains.intellij.ce'
+    'com.jetbrains.intellij',  # Also used by MPS
+    'com.jetbrains.intellij.ce',
+    'com.jetbrains.AppCode',
+    'com.jetbrains.CLion',
+    'com.jetbrains.datagrip',
+    'com.jetbrains.goland',
+    'com.jetbrains.PhpStorm',
+    'com.jetbrains.pycharm',
+    'com.jetbrains.rubymine',
+    'com.jetbrains.WebStorm',
+    'com.google.android.studio'
   ]
 
 _.extend Settings,
   darwin:
     applicationsThatNeedExplicitModifierPresses: [
-      'IntelliJ IDEA CE'
+      'IntelliJ IDEA',
+      'IntelliJ IDEA CE',
+      'AppCode',
+      'CLion',
+      'DataGrip',
+      'GoLand',
+      'MPS'
+      'PhpStorm',
+      'PyCharm',
+      'PyCharm CE',
+      'RubyMine',
+      'WebStorm',
+      'Android Studio'
     ]
 
 # TODO: Determine when I can use @key vs. key code scripting.
