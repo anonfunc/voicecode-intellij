@@ -10,21 +10,20 @@ Scope.register
     'com.jetbrains.intellij.ce'
   ]
 
+_.extend Settings,
+  darwin:
+    applicationsThatNeedExplicitModifierPresses: [
+      'IntelliJ IDEA CE'
+    ]
+
 # TODO: Determine when I can use @key vs. key code scripting.
 # All of this assumes using OS X 10.5+ keymap!
 pack.implement
   scope: 'intellij',
-  'editor:move-to-line-number': (input) ->
-    # Cmd-L
-    @applescript 'tell application "System Events" to key code 37 using command down'
-    @delay 50
-    @string parseInt(input)
-    @delay 50
-    @key 'Enter'
-    @delay 50
+  # Object package
   'object:duplicate': ->
     # Cmd-D
-    @applescript 'tell application "System Events" to key code 2 using command down'
+    @key 'd', 'command'
   'object:backward': ->
     # Previous edit location
     @key '[', 'command'
@@ -40,36 +39,43 @@ pack.implement
   'object:previous': ->
     # Previous method?
     @key 'up', 'control'
-  'editor:toggle-comments': ->
-    # Cmd-/
-    @applescript 'tell application "System Events" to key code 44 using command down'
-  'editor:expand-selection-to-scope': ->
-    @applescript 'tell application "System Events" to key code 126 using option down'
-  'editor:insert-from-line-number': (input) ->
-    # store clipboard
-    clipboard = @getClipboard()
-    # Store current position: Opt-F3, 0
-    @applescript 'tell application "System Events" to key code 99 using option down'
+  # Editor package
+  'editor:move-to-line-number': (input) ->
+    # Cmd-L
+    @key 'l', 'command'
     @delay 50
-    @applescript 'tell application "System Events" to key code 29'
+    @string parseInt(input)
+    @delay 50
+    # @key 'Enter'
+    @enter()
+    @delay 50
+  'editor:toggle-comments': ->
+    @key '/', 'command'
+  'editor:expand-selection-to-scope': ->
+    @key 'up', 'option'
+  'editor:insert-from-line-number': (input) ->
+    # store old clipboard
+    clipboard = @getClipboard()
+    # Store current position at bookmark 0
+    @key '0', 'control shift'
     @delay 50
     # Jump to line (see above)
     @do 'editor:move-to-line-number', input
     @delay 50
     # Select line and copy: Command left, Shift command right, Cmd-C
-    @applescript 'tell application "System Events" to key code 123 using command down'
+    @key 'left', 'command'
     @delay 50
-    @applescript 'tell application "System Events" to key code 124 using {command down, shift down}'
+    @key 'right', 'command shift'
     @delay 50
-    @applescript 'tell application "System Events" to key code 8 using command down'
+    @key 'c', 'command'
     @delay 50
-    # Jump to original position: Ctrl-0
-    @applescript 'tell application "System Events" to key code 29 using control down'
+    # Jump to bookmark 0, our original position:
+    @key '0', 'control'
     @delay 50
     # Clear bookmark
-    @applescript 'tell application "System Events" to key code 99'
-    # Paste: Cmd-V
-    @applescript 'tell application "System Events" to key code 9 using command down'
+    @key '0', 'control shift'
+    # Paste.
+    @key 'v', 'command'
     @delay 50
     # Restore clipboard
     @setClipboard(clipboard)
@@ -83,8 +89,7 @@ pack.implement
     # XXX The intellij ones don't match up with expected template names.
     # Create templates matching VC?   Or make VC templates match intellij?
     # (or freeform...)
-    #@key 'j', 'command'
-    @applescript 'tell application "System Events" to key code 38 using command down'
+    @key 'j', 'command'
     console.log args.codesnippet
     if args.codesnippet
       @delay 100
@@ -164,12 +169,9 @@ pack.implement
     # Recent files, not projects.
     @key 'e', 'command'
   'delete:lines': (input) ->
-    console.log input.first
     if input
-      # Store current line: Opt-F3, 0
-      @applescript 'tell application "System Events" to key code 99 using option down'
-      @delay 50
-      @applescript 'tell application "System Events" to key code 29'
+      # Store current position: Ctrl-Shift-0
+      @key '0', 'control shift'
       @delay 50
       first = input.first
       if 'last' in input
@@ -180,9 +182,11 @@ pack.implement
       @delay 100
       @key 'delete', 'command'
       @delay 25
-      # Jump to original line: Ctrl-0
-      @applescript 'tell application "System Events" to key code 29 using control down'
+      # Jump to original position: Ctrl-0
+      @key '0', 'control'
       @delay 50
+      # Clear bookmark
+      @key '0', 'control shift'
     else
       @key 'delete', 'command'
 
@@ -204,3 +208,42 @@ pack.command 'intellij-smart-finish',
   action: ->
     @key 'enter', 'control shift'
 
+pack.command 'intellij-zoom-editor',
+  spoken: 'idea zoom'
+  description: 'Toggle maximizing editor'
+  action: ->
+    @key 'F12', 'command shift'
+
+pack.command 'intellij-find-usage',
+  spoken: 'idea find usage'
+  description: 'Toggle maximizing editor'
+  action: ->
+    @key 'F7', 'option'
+
+pack.command 'intellij-refactor',
+  spoken: 'idea reflector'
+  description: 'Open refactor dialog'
+  action: ->
+    @key 't', 'control'
+
+pack.command 'intellij-quick-fix',
+  spoken: 'idea fix this'
+  description: 'Open quick fix dialog'
+  action: ->
+    @key 'enter', 'option'
+
+pack.command 'intellij-quick-fix-next',
+  spoken: 'idea fix next'
+  description: 'Open quick fix dialog'
+  action: ->
+    @key 'f2'
+    @delay 50
+    @key 'enter', 'option'
+
+pack.command 'intellij-quick-fix-previous',
+  spoken: 'idea fix previous'
+  description: 'Open quick fix dialog'
+  action: ->
+    @key 'f2', 'shift'
+    @delay 50
+    @key 'enter', 'option'
