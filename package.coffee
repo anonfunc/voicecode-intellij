@@ -4,6 +4,24 @@ pack = Packages.register
   name: 'intellij'
   description: 'Jetbrains IntelliJ IDEA (and friends) integration'
 
+pack.settings
+  # Editor Actions | Move Caret to Code Block Start
+  previousBlock: ['[', 'command option']
+  # Editor Actions | Move Caret to Code Block End with Selection
+  selectToNextBlock: [']', 'command option shift']
+  # Other | Show Intention Actions
+  showIntentionActions: ['enter', 'option']
+
+_a = global.Actions
+
+position = () ->
+  _a.openMenuBarPath(['Navigate', 'Line/Column...'])
+  _a.delay 100
+  copied = _.split _a.getSelectedText(), ':'
+  _a.delay 25
+  _a.key 'escape'
+  copied
+
 Scope.register
   name: "intellij"
   applications: [
@@ -38,81 +56,77 @@ _.extend Settings,
       'Android Studio'
     ]
 
-# TODO: Determine when I can use @key vs. key code scripting.
-# All of this assumes using OS X 10.5+ keymap!
 pack.implement
   scope: 'intellij',
   # Object package
   'object:duplicate': ->
-    # Cmd-D
-    @key 'd', 'command'
+    @openMenuBarPath(['Edit', 'Duplicate Line'])
   'object:backward': ->
-    # Previous edit location
-    @key '[', 'command'
+    @openMenuBarPath(['Navigate', 'Back'])
   'object:forward': ->
-    # Next edit location
-    @key ']', 'command'
+    @openMenuBarPath(['Navigate', 'Forward'])
   'object:refresh': ->
     # Synchronize.
-    @key 'y', 'command option'
+    @openMenuBarPath(['File', 'Synchronize'])
   'object:next': ->
     # Next method?
-    @key 'down', 'control'
+    @openMenuBarPath(['Navigate', 'Next Method'])
   'object:previous': ->
     # Previous method?
-    @key 'up', 'control'
+    @openMenuBarPath(['Navigate', 'Previous Method'])
   # Editor package
   'editor:move-to-line-number': (input) ->
     # Cmd-L
-    @key 'l', 'command'
+    @openMenuBarPath(['Navigate', 'Line/Column...'])
     @delay 50
     @string parseInt(input)
     @delay 50
-    # @key 'Enter'
     @enter()
     @delay 50
   'editor:toggle-comments': ->
-    @key '/', 'command'
+    @openMenuBarPath(['Code', 'Comment with Line Comment'])
   'editor:expand-selection-to-scope': ->
-    @key 'up', 'option'
+    @openMenuBarPath(['Edit', 'Extend Selection'])
   'editor:insert-from-line-number': (input) ->
     # store old clipboard
     clipboard = @getClipboard()
-    # Store current position at bookmark 0
-    @key '0', 'control shift'
-    @delay 50
+    currentPosition = position()
     # Jump to line (see above)
     @do 'editor:move-to-line-number', input
     @delay 50
     # Select line and copy: Command left, Shift command right, Cmd-C
+    # Would a keymap ever be able to mess with this?
+    # Yes, but the two OS X keymaps do not.
     @key 'left', 'command'
     @delay 50
     @key 'right', 'command shift'
     @delay 50
-    @key 'c', 'command'
+    @copy()
     @delay 50
-    # Jump to bookmark 0, our original position:
-    @key '0', 'control'
+    # Jump to our exact original position:
+    @openMenuBarPath(['Navigate', 'Line/Column...'])
     @delay 50
-    # Clear bookmark
-    @key '0', 'control shift'
+    @string currentPosition[0] + ':' + currentPosition[1]
+    @delay 50
+    @enter()
     # Paste.
-    @key 'v', 'command'
+    @paste()
     @delay 50
     # Restore clipboard
     @setClipboard(clipboard)
   'editor:open-command-pallet': ->
-    @key 'a', 'command shift'
-  'editor:expand-selection-to-indentation': ->
-    @key '[', 'command option'
+    @openMenuBarPath(['Help', 'Find Action...'])
+  'selection:block': ->  # Close to 'editor:expand-selection-to-indentation', but I dunno how that one is going to work.
+    # No menu items for cursor movement!
+    @key pack.settings().previousBlock[0], pack.settings().previousBlock[1]
     @delay 50
-    @key ']', 'command option shift'
+    @key pack.settings().selectToNextBlock[0], pack.settings().selectToNextBlock[1]
   'editor:insert-code-template': (args)->
     # XXX The intellij ones don't match up with expected template names.
     # Create templates matching VC?   Or make VC templates match intellij?
     # (or freeform...)
-    @key 'j', 'command'
-    console.log args.codesnippet
+    @openMenuBarPath(['Code', 'Insert Live Template...'])
+    @delay 50
     if args.codesnippet
       @delay 100
       @string args.codesnippet
@@ -136,20 +150,17 @@ pack.implement
       @key 'left', 'command'
       @delay 25
       while first < last
-        console.log first
         @key 'down', 'shift'
         first++
         @delay 25
       @key 'right', 'command shift'
   'editor:extend-selection-to-line-number': (input) ->
     if input
-      clipboard = @getClipboard()
-      @key 'l', 'command'
+      @openMenuBarPath(['Navigate', 'Line/Column...'])
       @delay 100
-      @do 'clipboard:copy'
+      copied = _.split @getSelectedText(), ':'
       @delay 25
       @key 'escape'
-      copied = _.split @getClipboard(), ':'
       currentLineNumber = parseInt(copied[0])
       target = parseInt(input)
       if currentLineNumber < target
@@ -166,7 +177,6 @@ pack.implement
           @delay 25
           counter++
         @key 'left', 'command shift'
-      @setClipboard(clipboard)
   'editor:select-line-number': (input) ->
     @do 'editor:move-to-line-number', input
     @delay 50
@@ -189,83 +199,122 @@ pack.implement
     @key 'enter'
   'editor:list-projects': ->
     # Recent files, not projects.
-    @key 'e', 'command'
+    @openMenuBarPath(['View', 'Recent Files'])
   'delete:lines': (input) ->
     if input
-      # Store current position: Ctrl-Shift-0
-      @key '0', 'control shift'
-      @delay 50
+      # Store current position:
+      currentPosition = position()
       first = input.first
+      if parseInt(first) <= parseInt(currentPosition[0])
+        # Deleting a single line above my line, so we'll have to jump back to a higher line to compensate.
+        currentPosition[0] = '' + (parseInt(currentPosition[0]) - 1)
       if 'last' in input
-        # No idea how this is triggered.
+        # No idea how this path would be triggered.
         @do 'editor:select-line-number-range', '' + first + last
       else
         @do 'editor:move-to-line-number', first
       @delay 100
-      @key 'delete', 'command'
+      # "Delete line" has no menu bar item!
+      # Script the longer way: command right, shift command left, delete x2
+      @key 'right', 'command'
       @delay 25
-      # Jump to original position: Ctrl-0
-      @key '0', 'control'
+      @key 'left', 'command shift'
+      @delay 25
+      @key 'delete'
+      @delay 25
+      @key 'delete'
+      @delay 25
+      # Jump to our exact original position:
+      @openMenuBarPath(['Navigate', 'Line/Column...'])
       @delay 50
-      # Clear bookmark
-      @key '0', 'control shift'
+      @string currentPosition[0] + ':' + currentPosition[1]
+      @delay 50
+      @enter()
     else
-      @key 'delete', 'command'
+      # Delete line has no menu bar item!
+      # @key 'delete', 'command'
+      # Script the longer way: command right, shift command left, delete
+      # This has a small advantage in that it matches snipline behavior in other editors by leaving an empty line.
+      @key 'right', 'command'
+      @delay 25
+      @key 'left', 'command shift'
+      @delay 25
+      @key 'delete'
+      @delay 25
 
 pack.command 'intellij-complete',
   spoken: 'comply'
   description: 'Trigger completion.'
   action: ->
-    @key 'space', 'control'
+    if Scope.active('intellij')
+      @openMenuBarPath(['Code', 'Completion', 'Basic'])
+    else
+      # using indirection for name, in case the name is redefined via changeSpoken
+      @string pack._commands['intellij:intellij-complete'].spoken
 
 pack.command 'intellij-smart-complete',
   spoken: 'schmaltz'
   description: 'Trigger smart completion.  Do it again to search deeper.'
   action: ->
-    @key 'space', 'control shift'
+    if Scope.active('intellij')
+      # This works correctly when repeated!
+      @openMenuBarPath(['Code', 'Completion', 'SmartType'])
+    else
+      @string pack._commands['intellij:intellij-smart-complete'].spoken
 
 pack.command 'intellij-smart-finish',
   spoken: 'finagle'
   description: 'Smart finish.  Balances parens, braces, etc.'
   action: ->
-    @key 'enter', 'control shift'
+    if Scope.active('intellij')
+      @openMenuBarPath(['Edit', 'Complete Current Statement'])
+    else
+      @string pack._commands['intellij:intellij-smart-finish'].spoken
 
 pack.command 'intellij-zoom-editor',
   spoken: 'idea zoom'
   description: 'Toggle maximizing editor'
   action: ->
-    @key 'F12', 'command shift'
-
+    if Scope.active('intellij')
+      @openMenuBarPath(['Window', 'Active Tool Window', 'Hide All Windows'])
+    
 pack.command 'intellij-find-usage',
   spoken: 'idea find usage'
-  description: 'Toggle maximizing editor'
+  description: 'Find usages of current symbol'
   action: ->
-    @key 'F7', 'option'
+    if Scope.active('intellij')
+      @openMenuBarPath(['Edit', 'Find', 'Find Usages'])
 
 pack.command 'intellij-refactor',
   spoken: 'idea reflector'
   description: 'Open refactor dialog'
   action: ->
-    @key 't', 'control'
+    if Scope.active('intellij')
+      @openMenuBarPath(['Refactor', 'Refactor This...'])
 
 pack.command 'intellij-quick-fix',
   spoken: 'idea fix this'
   description: 'Open quick fix dialog'
   action: ->
-    @key 'enter', 'option'
+    # "Show intention actions" has no menu item!
+    # Luckily, this is identical in both OS X keymaps, but added to settings just in case.
+    if Scope.active('intellij')
+      @key pack.settings().showIntentionActions...
 
 pack.command 'intellij-quick-fix-next',
   spoken: 'idea fix next'
   description: 'Open quick fix dialog'
   action: ->
-    @key 'f2'
-    @delay 50
-    @key 'enter', 'option'
+    if Scope.active('intellij')
+      @openMenuBarPath(['Navigate', 'Next Highlighted Error'])
+      @delay 50
+      @do 'intellij:intellij-quick-fix'
 
 pack.command 'intellij-quick-fix-previous',
   spoken: 'idea fix previous'
   description: 'Open quick fix dialog'
   action: ->
-    @key 'f2', 'shift'
-    @delay 50
-    @key 'enter', 'option'
+    if Scope.active('intellij')
+      @openMenuBarPath(['Navigate', 'Previous Highlighted Error'])
+      @delay 50
+      @do 'intellij:intellij-quick-fix'
