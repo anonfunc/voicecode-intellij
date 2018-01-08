@@ -23,7 +23,7 @@ position = () ->
   copied
 
 Scope.register
-  name: "intellij"
+  name: 'intellij'
   applications: [
     'com.jetbrains.intellij',  # Also used by MPS
     'com.jetbrains.intellij.ce',
@@ -214,7 +214,7 @@ pack.implement
       else
         @do 'editor:move-to-line-number', first
       @delay 100
-      # "Delete line" has no menu bar item!
+      # 'Delete line' has no menu bar item!
       # Script the longer way: command right, shift command left, delete x2
       @key 'right', 'command'
       @delay 25
@@ -273,6 +273,7 @@ pack.commands
 
   'intellij-smart-complete':
     spoken: 'schmaltz'
+    repeatable: true
     description: 'Trigger smart completion.  Do it again to search deeper.'
     action: ->
       if Scope.active('intellij')
@@ -315,7 +316,7 @@ pack.commands
     spoken: 'idea fix this'
     description: 'Open quick fix dialog'
     action: ->
-      # "Show intention actions" has no menu item!
+      # 'Show intention actions' has no menu item!
       # Luckily, this is identical in both OS X keymaps, but added to settings just in case.
       if Scope.active('intellij')
         @key pack.settings().showIntentionActions...
@@ -339,37 +340,47 @@ pack.commands
         @do 'intellij:intellij-quick-fix'
 
   'intellij-go-to-declaration':
-    spoken: "decker"
-    description: "Go to declaration"
-    # misspellings: ["jekyll", "deco"]
+    spoken: 'decker'
+    description: 'Go to declaration'
+    # misspellings: ['jekyll', 'deco']
     action: ->
       if Scope.active('intellij')
         @openMenuBarPath(['Navigate', 'Declaration'])
 
-  "intellij-go-to-implementation":
-    spoken: "idea implementers"
-    description: "Go to implementation(s)"
+  'intellij-go-to-implementation':
+    spoken: 'idea implementers'
+    description: 'Go to implementation(s)'
     action: ->
       if Scope.active('intellij')
         @openMenuBarPath(['Navigate', 'Implementation(s)'])
 
-  "intellij-go-to-type-declaration":
-    spoken: "idea type"
-    description: "Go to type declaration"
+  'intellij-go-to-type-declaration':
+    spoken: 'idea type'
+    description: 'Go to type declaration'
     action: ->
       if Scope.active('intellij')
         @openMenuBarPath(['Navigate', 'Type Declaration'])
 
-  "intellij-surround":
-    spoken: "idea surround"
-    description: "Open Surround With dialog."
+  'intellij-surround':
+    spoken: 'idea surround'
+    description: 'Open Surround With dialog.'
     action: ->
       if Scope.active('intellij')
         @openMenuBarPath(['Code', 'Surround With'])
 
-  "intellij-generate":
-    spoken: "idea generate"
-    description: "Open Generate Code dialog."
+  'intellij-generate':
+    spoken: 'idea generate'
+    description: 'Open Generate Code dialog.'
     action: ->
       if Scope.active('intellij')
         @openMenuBarPath(['Code', 'Generate...'])
+
+  'intellij-decrease-code-blocks-selection':
+    spoken: 'brakong'
+    description: 'Decrease current selection to previous state'
+    repeatable: true
+    action: ->
+      if Scope.active('intellij')
+        @openMenuBarPath(['Edit', 'Shrink Selection'])
+      else
+        @string pack._commands['intellij:intellij-smart-complete'].spoken
