@@ -241,80 +241,135 @@ pack.implement
       @delay 25
       @key 'delete'
       @delay 25
+  'cursor:way-up': ->
+    # Same in Mac OS X and Mac OS X 10.5, but could also implement as Edit->Select All and then left/right.
+    @key 'home', 'command'
+  'cursor:way-down': ->
+    @key 'end', 'command'
+  'delete:way-left': ->
+    @key 'left', 'command shift'
+    @key 'delete'
+  'selection:way-up': ->
+    # Same in Mac OS X and Mac OS X 10.5
+    @key 'home', 'shift command'
+  'selection:way-down': ->
+    # Same in Mac OS X and Mac OS X 10.5
+    @key 'end', 'shift command'
+  'text-manipulation:move-line-down': ->
+    @openMenuBarPath(['Code', 'Move Line Down'])
+  'text-manipulation:move-line-up': ->
+    @openMenuBarPath(['Code', 'Move Line Up'])
 
-pack.command 'intellij-complete',
-  spoken: 'comply'
-  description: 'Trigger completion.'
-  action: ->
-    if Scope.active('intellij')
-      @openMenuBarPath(['Code', 'Completion', 'Basic'])
-    else
-      # using indirection for name, in case the name is redefined via changeSpoken
-      @string pack._commands['intellij:intellij-complete'].spoken
+pack.commands
+  'intellij-complete':
+    spoken: 'comply'
+    description: 'Trigger completion.'
+    action: ->
+      if Scope.active('intellij')
+        @openMenuBarPath(['Code', 'Completion', 'Basic'])
+      else
+        # using indirection for name, in case the name is redefined via changeSpoken
+        @string pack._commands['intellij:intellij-complete'].spoken
 
-pack.command 'intellij-smart-complete',
-  spoken: 'schmaltz'
-  description: 'Trigger smart completion.  Do it again to search deeper.'
-  action: ->
-    if Scope.active('intellij')
-      # This works correctly when repeated!
-      @openMenuBarPath(['Code', 'Completion', 'SmartType'])
-    else
-      @string pack._commands['intellij:intellij-smart-complete'].spoken
+  'intellij-smart-complete':
+    spoken: 'schmaltz'
+    description: 'Trigger smart completion.  Do it again to search deeper.'
+    action: ->
+      if Scope.active('intellij')
+        # This works correctly when repeated!
+        @openMenuBarPath(['Code', 'Completion', 'SmartType'])
+      else
+        @string pack._commands['intellij:intellij-smart-complete'].spoken
 
-pack.command 'intellij-smart-finish',
-  spoken: 'finagle'
-  description: 'Smart finish.  Balances parens, braces, etc.'
-  action: ->
-    if Scope.active('intellij')
-      @openMenuBarPath(['Edit', 'Complete Current Statement'])
-    else
-      @string pack._commands['intellij:intellij-smart-finish'].spoken
+  'intellij-smart-finish':
+    spoken: 'finagle'
+    description: 'Smart finish.  Balances parens, braces, etc.'
+    action: ->
+      if Scope.active('intellij')
+        @openMenuBarPath(['Edit', 'Complete Current Statement'])
+      else
+        @string pack._commands['intellij:intellij-smart-finish'].spoken
 
-pack.command 'intellij-zoom-editor',
-  spoken: 'idea zoom'
-  description: 'Toggle maximizing editor'
-  action: ->
-    if Scope.active('intellij')
-      @openMenuBarPath(['Window', 'Active Tool Window', 'Hide All Windows'])
-    
-pack.command 'intellij-find-usage',
-  spoken: 'idea find usage'
-  description: 'Find usages of current symbol'
-  action: ->
-    if Scope.active('intellij')
-      @openMenuBarPath(['Edit', 'Find', 'Find Usages'])
+  'intellij-zoom-editor':
+    spoken: 'idea zoom'
+    description: 'Toggle maximizing editor'
+    action: ->
+      if Scope.active('intellij')
+        @openMenuBarPath(['Window', 'Active Tool Window', 'Hide All Windows'])
 
-pack.command 'intellij-refactor',
-  spoken: 'idea reflector'
-  description: 'Open refactor dialog'
-  action: ->
-    if Scope.active('intellij')
-      @openMenuBarPath(['Refactor', 'Refactor This...'])
+  'intellij-find-usage':
+    spoken: 'idea find usage'
+    description: 'Find usages of current symbol'
+    action: ->
+      if Scope.active('intellij')
+        @openMenuBarPath(['Edit', 'Find', 'Find Usages'])
 
-pack.command 'intellij-quick-fix',
-  spoken: 'idea fix this'
-  description: 'Open quick fix dialog'
-  action: ->
-    # "Show intention actions" has no menu item!
-    # Luckily, this is identical in both OS X keymaps, but added to settings just in case.
-    if Scope.active('intellij')
-      @key pack.settings().showIntentionActions...
+  'intellij-refactor':
+    spoken: 'idea reflector'
+    description: 'Open refactor dialog'
+    action: ->
+      if Scope.active('intellij')
+        @openMenuBarPath(['Refactor', 'Refactor This...'])
 
-pack.command 'intellij-quick-fix-next',
-  spoken: 'idea fix next'
-  description: 'Open quick fix dialog'
-  action: ->
-    if Scope.active('intellij')
-      @openMenuBarPath(['Navigate', 'Next Highlighted Error'])
-      @delay 50
-      @do 'intellij:intellij-quick-fix'
+  'intellij-quick-fix':
+    spoken: 'idea fix this'
+    description: 'Open quick fix dialog'
+    action: ->
+      # "Show intention actions" has no menu item!
+      # Luckily, this is identical in both OS X keymaps, but added to settings just in case.
+      if Scope.active('intellij')
+        @key pack.settings().showIntentionActions...
 
-pack.command 'intellij-quick-fix-previous',
-  spoken: 'idea fix previous'
-  description: 'Open quick fix dialog'
-  action: ->
-    if Scope.active('intellij')
-      @openMenuBarPath(['Navigate', 'Previous Highlighted Error'])
-      @delay 50
-      @do 'intellij:intellij-quick-fix'
+  'intellij-quick-fix-next':
+    spoken: 'idea fix next'
+    description: 'Open quick fix dialog on next highlighted error'
+    action: ->
+      if Scope.active('intellij')
+        @openMenuBarPath(['Navigate', 'Next Highlighted Error'])
+        @delay 50
+        @do 'intellij:intellij-quick-fix'
+
+  'intellij-quick-fix-previous':
+    spoken: 'idea fix previous'
+    description: 'Open quick fix dialog on previous highlighted error'
+    action: ->
+      if Scope.active('intellij')
+        @openMenuBarPath(['Navigate', 'Previous Highlighted Error'])
+        @delay 50
+        @do 'intellij:intellij-quick-fix'
+
+  'intellij-go-to-declaration':
+    spoken: "decker"
+    description: "Go to declaration"
+    # misspellings: ["jekyll", "deco"]
+    action: ->
+      if Scope.active('intellij')
+        @openMenuBarPath(['Navigate', 'Declaration'])
+
+  "intellij-go-to-implementation":
+    spoken: "idea implementers"
+    description: "Go to implementation(s)"
+    action: ->
+      if Scope.active('intellij')
+        @openMenuBarPath(['Navigate', 'Implementation(s)'])
+
+  "intellij-go-to-type-declaration":
+    spoken: "idea type"
+    description: "Go to type declaration"
+    action: ->
+      if Scope.active('intellij')
+        @openMenuBarPath(['Navigate', 'Type Declaration'])
+
+  "intellij-surround":
+    spoken: "idea surround"
+    description: "Open Surround With dialog."
+    action: ->
+      if Scope.active('intellij')
+        @openMenuBarPath(['Code', 'Surround With'])
+
+  "intellij-generate":
+    spoken: "idea generate"
+    description: "Open Generate Code dialog."
+    action: ->
+      if Scope.active('intellij')
+        @openMenuBarPath(['Code', 'Generate...'])

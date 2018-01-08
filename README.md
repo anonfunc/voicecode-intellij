@@ -67,3 +67,4 @@ This example is for the "OS X" keymap, so you might be able to just copy and pas
 
 - anonfunc
 - TerjeB
+- biegel
