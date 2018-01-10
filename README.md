@@ -19,11 +19,6 @@ However, my primary use case is currently Java and IntelliJ CE.  I will not be a
 
 ## Installation
 
-### Make required IntelliJ config changes:
-
-- [Disable cut/copy acting without an active selection.](https://stackoverflow.com/questions/32895522/disable-copying-entire-line-when-nothing-is-selected-in-intellij)
-- Change keymap to "Mac OS X 10.5+". (Or update package settings to match current keymap.  See below.)
-
 ### Clone this repo into the Voicecode home directory
 
 By default, this is `~/voicecode`, so:
@@ -33,6 +28,21 @@ By default, this is `~/voicecode`, so:
 ### You should not need to restart VoiceCode, but if it doesn't work... restart VoiceCode.
 
 ### Enable the package commands in VoiceCode.
+
+### Make required IntelliJ config changes:
+
+- [Disable cut/copy acting without an active selection.](https://stackoverflow.com/questions/32895522/disable-copying-entire-line-when-nothing-is-selected-in-intellij)
+- Change keymap to "Mac OS X 10.5+". (Or update package settings to match current keymap.  See below.)
+- Add bindings for partial words:
+    - Preferences, Keymap
+    - Search for "CamelHumps"
+    - Bind "Move Caret to Next Word in Different CamelHumps Mode" to Control-Right  (`wonkrish`)
+    - Bind "Move Caret to Previous Word in Different CamelHumps Mode" to Control-Left (`wonkrim`)
+    - Bind "Delete to Word End in Different "CamelHumps" Mode to Control-Option-ForwardDelete (`steffi`)
+    - Bind "Delete to Word Start in Different "CamelHumps" Mode to Control-Option-Delete (`stippy`)
+    - (If enabled, saying the command types the keys in question.)
+    - If prompted, remove other bindings.
+    - Apply and accept changes.
 
 ### [Import and train vocabulary in Dragon](http://voicecode.io/doc/vocabulary).
 

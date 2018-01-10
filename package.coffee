@@ -295,6 +295,10 @@ pack.implement
       @openMenuBarPath(['Edit', 'Find', 'Find Previous / Move to Previous Occurrence'])
       @delay 15
       @key 'escape'
+  'delete:partial-word': ->
+    @key 'Delete', 'control option'
+  'delete:partial-word-forward': ->
+    @key 'ForwardDelete', 'control option'
 
 pack.commands
   'intellij-complete':
