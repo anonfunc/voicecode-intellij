@@ -259,6 +259,40 @@ pack.implement
     @openMenuBarPath(['Code', 'Move Line Down'])
   'text-manipulation:move-line-up': ->
     @openMenuBarPath(['Code', 'Move Line Up'])
+  'selection:previous-occurrence': (input) ->
+    if input?.value?
+      term = input?.value
+      @openMenuBarPath(['Edit', 'Find', 'Find...'])
+      @delay 15
+      @paste term
+      @delay 25
+      @openMenuBarPath(['Edit', 'Find', 'Find Previous / Move to Previous Occurrence'])
+      @delay 25
+      @key 'escape'
+  'selection:next-occurrence': (input) ->
+    if input?.value?
+      term = input?.value
+      @openMenuBarPath(['Edit', 'Find', 'Find...'])
+      @delay 15
+      @paste term
+      @delay 25
+      @openMenuBarPath(['Edit', 'Find', 'Find Next / Move to Next Occurrence'])
+      @delay 25
+      @key 'escape'
+  'selection:next-selection-occurrence': ->
+    if @getSelectedText()
+      @openMenuBarPath(['Edit', 'Find', 'Find...'])
+      @delay 15
+      @openMenuBarPath(['Edit', 'Find', 'Find Next / Move to Next Occurrence'])
+      @delay 15
+      @key 'escape'
+  'selection:previous-selection-occurrence': ->
+    if @getSelectedText()
+      @openMenuBarPath(['Edit', 'Find', 'Find...'])
+      @delay 15
+      @openMenuBarPath(['Edit', 'Find', 'Find Previous / Move to Previous Occurrence'])
+      @delay 15
+      @key 'escape'
 
 pack.commands
   'intellij-complete':
