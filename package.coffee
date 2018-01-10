@@ -85,8 +85,10 @@ pack.implement
     @delay 50
   'editor:toggle-comments': ->
     @openMenuBarPath(['Code', 'Comment with Line Comment'])
-  'editor:expand-selection-to-scope': ->
+  'editor:expand-selection-to-scope': (input, context) ->
     @openMenuBarPath(['Edit', 'Extend Selection'])
+    if context.chain?
+      @delay 1000
   'editor:insert-from-line-number': (input) ->
     # store old clipboard
     clipboard = @getClipboard()
@@ -416,5 +418,3 @@ pack.commands
     action: ->
       if Scope.active('intellij')
         @openMenuBarPath(['Edit', 'Shrink Selection'])
-      else
-        @string pack._commands['intellij:intellij-smart-complete'].spoken
