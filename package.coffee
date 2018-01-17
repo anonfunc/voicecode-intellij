@@ -276,10 +276,12 @@ pack.implement
       term = input?.value
       @openMenuBarPath(['Edit', 'Find', 'Find...'])
       @delay 15
+      @key "Delete"
+      @delay 10
       @paste term
       @delay 25
-      @openMenuBarPath(['Edit', 'Find', 'Find Next / Move to Next Occurrence'])
-      @delay 25
+      # @openMenuBarPath(['Edit', 'Find', 'Find Next / Move to Next Occurrence'])
+      # @delay 25
       @key 'escape'
   'selection:next-selection-occurrence': ->
     if @getSelectedText()
@@ -299,6 +301,8 @@ pack.implement
     @key 'Delete', 'control option'
   'delete:partial-word-forward': ->
     @key 'ForwardDelete', 'control option'
+  'window:new-tab': ->
+    @openMenuBarPath(['Navigate', 'Class...'])
 
 pack.commands
   'intellij-complete':
@@ -406,7 +410,7 @@ pack.commands
     description: 'Open Surround With dialog.'
     action: ->
       if Scope.active('intellij')
-        @openMenuBarPath(['Code', 'Surround With'])
+        @openMenuBarPath(['Code', 'Surround With...'])
 
   'intellij-generate':
     spoken: 'idea generate'
