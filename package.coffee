@@ -60,7 +60,10 @@ pack.implement
   scope: 'intellij',
   # Object package
   'object:duplicate': ->
-    @openMenuBarPath(['Edit', 'Duplicate Line'])
+    if @getSelectedText()
+      @openMenuBarPath(['Edit', 'Duplicate Selection'])
+    else
+      @openMenuBarPath(['Edit', 'Duplicate Line'])
   'object:backward': ->
     @openMenuBarPath(['Navigate', 'Back'])
   'object:forward': ->
