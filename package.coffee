@@ -148,35 +148,52 @@ pack.implement
         first = temp
       # Jump to line (see above)
       @do 'editor:move-to-line-number', first
-      @delay 50
+      @delay 25
       @key 'left', 'command'
       @delay 25
       while first < last
         @key 'down', 'shift'
+        # @delay 15
+        @openMenuBarPath(['Code', 'Folding', 'Expand'])
+        # @delay 15
         first++
-        @delay 25
       @key 'right', 'command shift'
   'editor:extend-selection-to-line-number': (input) ->
     if input
+      if @getSelectedText()
+        @key 'escape'
       @openMenuBarPath(['Navigate', 'Line/Column...'])
-      @delay 100
+      while not @getSelectedText()
+        @delay 15
+        console.log @getSelectedText()
+      # console.log @getSelectedText()
       copied = _.split @getSelectedText(), ':'
-      @delay 25
       @key 'escape'
+      @delay 10
       currentLineNumber = parseInt(copied[0])
       target = parseInt(input)
+      distance = Math.abs(currentLineNumber - target)
+      console.log currentLineNumber + ',' + target + ' Distance: ' + distance
+      if distance > 30
+        console.log "Refusing to select a line that far away" 
+        return
+      # console.log '' + copied + ', ' + target
       if currentLineNumber < target
         counter = currentLineNumber
         while counter < target
           @key 'down', 'shift'
-          @delay 25
+          #@delay 10
+          @openMenuBarPath(['Code', 'Folding', 'Expand'])
+          #@delay 10
           counter++
         @key 'right', 'command shift'
       else
         counter = target
         while counter < currentLineNumber
           @key 'up', 'shift'
-          @delay 25
+          #@delay 10
+          @openMenuBarPath(['Code', 'Folding', 'Expand'])
+          #@delay 10
           counter++
         @key 'left', 'command shift'
   'editor:select-line-number': (input) ->
