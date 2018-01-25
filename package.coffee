@@ -38,9 +38,7 @@ Scope.register
     'com.google.android.studio'
   ]
 
-_.extend Settings,
-  darwin:
-    applicationsThatNeedExplicitModifierPresses: [
+Settings.darwin.applicationsThatNeedExplicitModifierPresses.push(
       'IntelliJ IDEA',
       'IntelliJ IDEA CE',
       'AppCode',
@@ -54,10 +52,9 @@ _.extend Settings,
       'RubyMine',
       'WebStorm',
       'Android Studio'
-    ]
+)
 
-pack.implement
-  scope: 'intellij',
+pack.implement {scope: 'intellij'},
   # Object package
   'object:duplicate': ->
     if @getSelectedText()
@@ -178,7 +175,7 @@ pack.implement
       distance = Math.abs(currentLineNumber - target)
       console.log currentLineNumber + ',' + target + ' Distance: ' + distance
       if distance > 30
-        console.log "Refusing to select a line that far away" 
+        console.log 'Refusing to select a line that far away'
         return
       # console.log '' + copied + ', ' + target
       if currentLineNumber < target
@@ -223,6 +220,7 @@ pack.implement
     # Recent files, not projects.
     @openMenuBarPath(['View', 'Recent Files'])
   'delete:lines': (input) ->
+    console.log Scope.active('intellij')
     if input
       # Store current position:
       currentPosition = position()
@@ -296,7 +294,7 @@ pack.implement
       term = input?.value
       @openMenuBarPath(['Edit', 'Find', 'Find...'])
       @delay 15
-      @key "Delete"
+      @key 'Delete'
       @delay 10
       @paste term
       @delay 25
