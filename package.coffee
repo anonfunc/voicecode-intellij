@@ -1,5 +1,7 @@
 # https://stackoverflow.com/questions/32895522/disable-copying-entire-line-when-nothing-is-selected-in-intellij
 
+http = require 'http'
+
 pack = Packages.register
   name: 'intellij'
   description: 'Jetbrains IntelliJ IDEA (and friends) integration'
@@ -21,6 +23,44 @@ position = () ->
   _a.delay 25
   _a.key 'escape'
   copied
+
+# Each IDE gets its own port, as otherwise you wouldn't be able
+# to run two at the same time and switch between them.
+# Note that MPS and IntelliJ ultimate will conflict...
+portMapping = {
+  'com.jetbrains.intellij': 8653
+  'com.jetbrains.intellij.ce': 8654
+  'com.jetbrains.AppCode': 8655
+  'com.jetbrains.CLion': 8657
+  'com.jetbrains.datagrip': 8664
+  'com.jetbrains.goland': 8666
+  'com.jetbrains.PhpStorm': 8662
+  'com.jetbrains.pycharm': 8658
+  'com.jetbrains.rubymine': 8661
+  'com.jetbrains.WebStorm': 8663
+  'com.google.android.studio': 8652
+}
+
+idea = (args...) ->
+  command = args[0]
+  if args.length == 2
+    callback = args[1]
+  else
+    callback = console.log # XXX chatty
+  port = portMapping[_a.currentApplication().bundleId]
+  response = ""
+  http.get({
+    hostname: 'localhost',
+    port: port,
+    path: '/' + encodeURIComponent(command),
+    agent: false
+  }, (res) ->
+    rawData = ''
+    res.on 'data', (chunk) -> rawData += chunk
+    res.on 'end', () -> callback rawData
+  ).on 'error', (e) ->
+    console.log "Error talking to intellij : " + e
+
 
 Scope.register
   name: 'intellij'
@@ -57,72 +97,54 @@ Settings.darwin.applicationsThatNeedExplicitModifierPresses.push(
 pack.implement {scope: 'intellij'},
   # Object package
   'object:duplicate': ->
-    if @getSelectedText()
-      @openMenuBarPath(['Edit', 'Duplicate Selection'])
-    else
-      @openMenuBarPath(['Edit', 'Duplicate Line'])
+    idea('action EditorDuplicate')
   'object:backward': ->
-    @openMenuBarPath(['Navigate', 'Back'])
+    idea('action Back')
   'object:forward': ->
-    @openMenuBarPath(['Navigate', 'Forward'])
+    idea('action Forward')
   'object:refresh': ->
     # Synchronize.
-    @openMenuBarPath(['File', 'Synchronize'])
+    idea('action Synchronize')
   'object:next': ->
     # Next method?
-    @openMenuBarPath(['Navigate', 'Next Method'])
+    idea('action MethodDown')
   'object:previous': ->
     # Previous method?
-    @openMenuBarPath(['Navigate', 'Previous Method'])
+    idea('action MethodUp')
   # Editor package
   'editor:move-to-line-number': (input) ->
-    # Cmd-L
-    @openMenuBarPath(['Navigate', 'Line/Column...'])
-    @delay 50
-    @string parseInt(input)
-    @delay 50
-    @enter()
-    @delay 50
+    idea("goto " + input + " 0")
   'editor:toggle-comments': ->
-    @openMenuBarPath(['Code', 'Comment with Line Comment'])
+    idea('action CommentByLineComment')
   'editor:expand-selection-to-scope': (input, context) ->
-    @openMenuBarPath(['Edit', 'Extend Selection'])
+    idea('action EditorSelectWord')
     if context.chain?
-      @delay 1000
+      @delay 100  # Still needed?
   'editor:insert-from-line-number': (input) ->
     # store old clipboard
     clipboard = @getClipboard()
     currentPosition = position()
     # Jump to line (see above)
-    @do 'editor:move-to-line-number', input
-    @delay 50
+    idea("goto " + input + " 0")
     # Select line and copy: Command left, Shift command right, Cmd-C
     # Would a keymap ever be able to mess with this?
     # Yes, but the two OS X keymaps do not.
-    @key 'left', 'command'
-    @delay 50
     @key 'right', 'command shift'
     @delay 50
     @copy()
     @delay 50
     # Jump to our exact original position:
-    @openMenuBarPath(['Navigate', 'Line/Column...'])
-    @delay 50
-    @string currentPosition[0] + ':' + currentPosition[1]
-    @delay 50
-    @enter()
+    idea("goto " + currentPosition[0] + " " + currentPosition[1])
     # Paste.
     @paste()
     @delay 50
     # Restore clipboard
     @setClipboard(clipboard)
   'editor:open-command-pallet': ->
-    @openMenuBarPath(['Help', 'Find Action...'])
+    idea("action GotoAction")
   'selection:block': ->  # Close to 'editor:expand-selection-to-indentation', but I dunno how that one is going to work.
-    # No menu items for cursor movement!
-    @key pack.settings().previousBlock[0], pack.settings().previousBlock[1]
-    @delay 50
-    @key pack.settings().selectToNextBlock[0], pack.settings().selectToNextBlock[1]
+    idea("action EditorCodeBlockStart")
+    idea("action EditorCodeBlockEndWithSelection")
   'editor:insert-code-template': (args)->
     # XXX The intellij ones don't match up with expected template names.
     # Create templates matching VC?   Or make VC templates match intellij?
@@ -147,8 +169,7 @@ pack.implement {scope: 'intellij'},
         last = first
         first = temp
       # Jump to line (see above)
-      @do 'editor:move-to-line-number', first
-      @delay 25
+      idea("goto " + first + " 0")
       @key 'left', 'command'
       @delay 25
       while first < last
@@ -197,24 +218,14 @@ pack.implement {scope: 'intellij'},
           counter++
         @key 'left', 'command shift'
   'editor:select-line-number': (input) ->
-    @do 'editor:move-to-line-number', input
-    @delay 50
-    @key 'left', 'command'
-    @delay 25
+    idea("goto " + input + " 0")
     @key 'right', 'command shift'
   'editor:move-to-line-number-and-way-left': (input) ->
-    @do 'editor:move-to-line-number', input
-    @delay 50
-    @key 'left', 'command'
+    idea("goto " + input + " 0")
   'editor:move-to-line-number-and-way-right': (input) ->
-    @do 'editor:move-to-line-number', input
-    @delay 50
-    @key 'right', 'command'
+    idea("goto " + input + " 9999")
   'editor:insert-under-line-number': (input) ->
-    @do 'editor:move-to-line-number', input
-    @delay 50
-    @key 'right', 'command'
-    @delay 25
+    idea("goto " + input + " 9999")
     @key 'enter'
   'editor:list-projects': ->
     # Recent files, not projects.
@@ -245,11 +256,7 @@ pack.implement {scope: 'intellij'},
       @key 'delete'
       @delay 25
       # Jump to our exact original position:
-      @openMenuBarPath(['Navigate', 'Line/Column...'])
-      @delay 50
-      @string currentPosition[0] + ':' + currentPosition[1]
-      @delay 50
-      @enter()
+      idea("goto " + currentPosition[0] + " " + currentPosition[1])
     else
       # Delete line has no menu bar item!
       # @key 'delete', 'command'
@@ -262,23 +269,20 @@ pack.implement {scope: 'intellij'},
       @key 'delete'
       @delay 25
   'cursor:way-up': ->
-    # Same in Mac OS X and Mac OS X 10.5, but could also implement as Edit->Select All and then left/right.
-    @key 'home', 'command'
+    idea("action EditorTextStart")
   'cursor:way-down': ->
-    @key 'end', 'command'
+    idea("action EditorTextEnd")
   'delete:way-left': ->
     @key 'left', 'command shift'
     @key 'delete'
   'selection:way-up': ->
-    # Same in Mac OS X and Mac OS X 10.5
-    @key 'home', 'shift command'
+    idea("action EditorTextStartWithSelection")
   'selection:way-down': ->
-    # Same in Mac OS X and Mac OS X 10.5
-    @key 'end', 'shift command'
+    idea("action EditorTextEndWithSelection"
   'text-manipulation:move-line-down': ->
-    @openMenuBarPath(['Code', 'Move Line Down'])
+    idea("action MoveLineDown")
   'text-manipulation:move-line-up': ->
-    @openMenuBarPath(['Code', 'Move Line Up'])
+    idea("action MoveLineUp")
   'selection:previous-occurrence': (input) ->
     if input?.value?
       term = input?.value
@@ -316,11 +320,11 @@ pack.implement {scope: 'intellij'},
       @delay 15
       @key 'escape'
   'delete:partial-word': ->
-    @key 'Delete', 'control option'
+    idea("action EditorDeleteToWordStartInDifferentHumpsMode")
   'delete:partial-word-forward': ->
-    @key 'ForwardDelete', 'control option'
+    idea("action EditorDeleteToWordEndInDifferentHumpsMode")
   'window:new-tab': ->
-    @openMenuBarPath(['Navigate', 'Class...'])
+    idea("action GotoClass")
 
 pack.commands
   'intellij-complete':
@@ -328,7 +332,7 @@ pack.commands
     description: 'Trigger completion.'
     action: ->
       if Scope.active('intellij')
-        @openMenuBarPath(['Code', 'Completion', 'Basic'])
+        idea("action CodeCompletion")
       else
         # using indirection for name, in case the name is redefined via changeSpoken
         @string pack._commands['intellij:intellij-complete'].spoken
@@ -339,8 +343,8 @@ pack.commands
     description: 'Trigger smart completion.  Do it again to search deeper.'
     action: ->
       if Scope.active('intellij')
-        # This works correctly when repeated!
-        @openMenuBarPath(['Code', 'Completion', 'SmartType'])
+        # This works correctly when repeated? XXX
+        idea("action SmartTypeCompletion")
       else
         @string pack._commands['intellij:intellij-smart-complete'].spoken
 
@@ -349,7 +353,7 @@ pack.commands
     description: 'Smart finish.  Balances parens, braces, etc.'
     action: ->
       if Scope.active('intellij')
-        @openMenuBarPath(['Edit', 'Complete Current Statement'])
+        idea("action EditorCompleteStatement")
       else
         @string pack._commands['intellij:intellij-smart-finish'].spoken
 
@@ -358,21 +362,21 @@ pack.commands
     description: 'Toggle maximizing editor'
     action: ->
       if Scope.active('intellij')
-        @openMenuBarPath(['Window', 'Active Tool Window', 'Hide All Windows'])
+        idea("action HideAllWindows")
 
   'intellij-find-usage':
     spoken: 'idea find usage'
     description: 'Find usages of current symbol'
     action: ->
       if Scope.active('intellij')
-        @openMenuBarPath(['Edit', 'Find', 'Find Usages'])
+        idea("action FindUsages")
 
   'intellij-refactor':
     spoken: 'idea reflector'
     description: 'Open refactor dialog'
     action: ->
       if Scope.active('intellij')
-        @openMenuBarPath(['Refactor', 'Refactor This...'])
+        idea("action Refactorings.QuickListPopupAction")
 
   'intellij-quick-fix':
     spoken: 'idea fix this'
@@ -381,25 +385,25 @@ pack.commands
       # 'Show intention actions' has no menu item!
       # Luckily, this is identical in both OS X keymaps, but added to settings just in case.
       if Scope.active('intellij')
-        @key pack.settings().showIntentionActions...
+        idea("action ShowIntentionActions")
 
   'intellij-quick-fix-next':
     spoken: 'idea fix next'
     description: 'Open quick fix dialog on next highlighted error'
     action: ->
       if Scope.active('intellij')
-        @openMenuBarPath(['Navigate', 'Next Highlighted Error'])
-        @delay 50
-        @do 'intellij:intellij-quick-fix'
+        idea("action GotoNextError")
+        idea("action ShowIntentionActions")
+        
 
   'intellij-quick-fix-previous':
     spoken: 'idea fix previous'
     description: 'Open quick fix dialog on previous highlighted error'
     action: ->
       if Scope.active('intellij')
-        @openMenuBarPath(['Navigate', 'Previous Highlighted Error'])
-        @delay 50
-        @do 'intellij:intellij-quick-fix'
+        idea("action GotoPreviousError")
+        idea("action ShowIntentionActions")
+        
 
   'intellij-go-to-declaration':
     spoken: 'decker'
@@ -407,35 +411,36 @@ pack.commands
     # misspellings: ['jekyll', 'deco']
     action: ->
       if Scope.active('intellij')
-        @openMenuBarPath(['Navigate', 'Declaration'])
+        idea("action GotoDeclaration")
+        
 
   'intellij-go-to-implementation':
     spoken: 'idea implementers'
     description: 'Go to implementation(s)'
     action: ->
       if Scope.active('intellij')
-        @openMenuBarPath(['Navigate', 'Implementation(s)'])
+        idea("action GotoImplementation")
 
   'intellij-go-to-type-declaration':
     spoken: 'idea type'
     description: 'Go to type declaration'
     action: ->
       if Scope.active('intellij')
-        @openMenuBarPath(['Navigate', 'Type Declaration'])
+        idea("action GotoTypeDeclaration")
 
   'intellij-surround':
     spoken: 'idea surround'
     description: 'Open Surround With dialog.'
     action: ->
       if Scope.active('intellij')
-        @openMenuBarPath(['Code', 'Surround With...'])
+        idea("action SurroundWith")
 
   'intellij-generate':
     spoken: 'idea generate'
     description: 'Open Generate Code dialog.'
     action: ->
       if Scope.active('intellij')
-        @openMenuBarPath(['Code', 'Generate...'])
+        idea("action Generate")
 
   'intellij-decrease-code-blocks-selection':
     spoken: 'brakong'
@@ -443,4 +448,4 @@ pack.commands
     repeatable: true
     action: ->
       if Scope.active('intellij')
-        @openMenuBarPath(['Edit', 'Shrink Selection'])
+        idea("action EditorUnSelectWord")
