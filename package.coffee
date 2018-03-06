@@ -6,23 +6,7 @@ pack = Packages.register
   name: 'intellij'
   description: 'Jetbrains IntelliJ IDEA (and friends) integration'
 
-pack.settings
-  # Editor Actions | Move Caret to Code Block Start
-  previousBlock: ['[', 'command option']
-  # Editor Actions | Move Caret to Code Block End with Selection
-  selectToNextBlock: [']', 'command option shift']
-  # Other | Show Intention Actions
-  showIntentionActions: ['enter', 'option']
-
 _a = global.Actions
-
-position = () ->
-  _a.openMenuBarPath(['Navigate', 'Line/Column...'])
-  _a.delay 100
-  copied = _.split _a.getSelectedText(), ':'
-  _a.delay 25
-  _a.key 'escape'
-  copied
 
 # Each IDE gets its own port, as otherwise you wouldn't be able
 # to run two at the same time and switch between them.
@@ -33,7 +17,7 @@ portMapping = {
   'com.jetbrains.AppCode': 8655
   'com.jetbrains.CLion': 8657
   'com.jetbrains.datagrip': 8664
-  'com.jetbrains.goland': 8666
+  'com.jetbrains.goland': 8659
   'com.jetbrains.PhpStorm': 8662
   'com.jetbrains.pycharm': 8658
   'com.jetbrains.rubymine': 8661
@@ -46,7 +30,7 @@ idea = (args...) ->
   if args.length == 2
     callback = args[1]
   else
-    callback = console.log # XXX chatty
+    callback = (_) -> 0
   port = portMapping[_a.currentApplication().bundleId]
   response = ""
   http.get({
@@ -59,7 +43,7 @@ idea = (args...) ->
     res.on 'data', (chunk) -> rawData += chunk
     res.on 'end', () -> callback rawData
   ).on 'error', (e) ->
-    console.log "Error talking to intellij : " + e
+    console.log "Error talking to intellij: " + port + " " + encodeURIComponent(command) + "\n" + e
 
 
 Scope.register
@@ -77,6 +61,24 @@ Scope.register
     'com.jetbrains.WebStorm',
     'com.google.android.studio'
   ]
+  condition: (input, context) ->
+    # We only want to use IntelliJ package if we're looking at the editor window
+    # Dialogs should use basic handling.
+    # Most dialogs have no title, but some do.
+    windowTitle = @applescript 'tell application "System Events" to get name of first window of (first application process whose frontmost is true)'
+    windowRole = @applescript 'tell application "System Events" to get subrole of first window of (first application process whose frontmost is true)'
+    # However, the main editor windows always have a title like: 
+    #   name [path] - file/path
+    # Using the square bracket as a hueristic should do for now.
+    if windowRole == "AXStandardWindow"
+      if windowTitle and windowTitle.indexOf('[') != -1 
+        true
+      else
+        # Go to line dialog, etc.
+        false
+    else
+      # Completion dialog, etc.
+      true
 
 Settings.darwin.applicationsThatNeedExplicitModifierPresses.push(
       'IntelliJ IDEA',
@@ -117,168 +119,86 @@ pack.implement {scope: 'intellij'},
   'editor:toggle-comments': ->
     idea('action CommentByLineComment')
   'editor:expand-selection-to-scope': (input, context) ->
-    idea('action EditorSelectWord')
-    if context.chain?
-      @delay 100  # Still needed?
+    idea 'action EditorSelectWord', (_) ->
+      # if context.chain?
+        # @delay 100  # Still needed?
   'editor:insert-from-line-number': (input) ->
-    # store old clipboard
-    clipboard = @getClipboard()
-    currentPosition = position()
-    # Jump to line (see above)
-    idea("goto " + input + " 0")
-    # Select line and copy: Command left, Shift command right, Cmd-C
-    # Would a keymap ever be able to mess with this?
-    # Yes, but the two OS X keymaps do not.
-    @key 'right', 'command shift'
-    @delay 50
-    @copy()
-    @delay 50
-    # Jump to our exact original position:
-    idea("goto " + currentPosition[0] + " " + currentPosition[1])
-    # Paste.
-    @paste()
-    @delay 50
-    # Restore clipboard
-    @setClipboard(clipboard)
+    idea "clone " + input
   'editor:open-command-pallet': ->
     idea("action GotoAction")
   'selection:block': ->  # Close to 'editor:expand-selection-to-indentation', but I dunno how that one is going to work.
-    idea("action EditorCodeBlockStart")
-    idea("action EditorCodeBlockEndWithSelection")
+    idea "action EditorCodeBlockStart", (_) ->
+      idea("action EditorCodeBlockEndWithSelection")
   'editor:insert-code-template': (args)->
     # XXX The intellij ones don't match up with expected template names.
     # Create templates matching VC?   Or make VC templates match intellij?
     # (or freeform...)
-    @openMenuBarPath(['Code', 'Insert Live Template...'])
-    @delay 50
-    if args.codesnippet
-      @delay 100
-      @string args.codesnippet
+    idea "action InsertLiveTemplate", (_) ->
       @delay 50
-      @key 'enter'
+      if args.codesnippet
+        @delay 100
+        @string args.codesnippet
+        @delay 50
+        @key 'enter'
   'editor:select-line-number-range': (input) ->
     if input
       number = input.trim()
       length = Math.floor(number.length / 2)
       first = number.substr(0, length)
       last = number.substr(length, length + 1)
-      first = parseInt(first)
-      last = parseInt(last)
-      if last < first 
-        temp = last
-        last = first
-        first = temp
-      # Jump to line (see above)
-      idea("goto " + first + " 0")
-      @key 'left', 'command'
-      @delay 25
-      while first < last
-        @key 'down', 'shift'
-        # @delay 15
-        @openMenuBarPath(['Code', 'Folding', 'Expand'])
-        # @delay 15
-        first++
-      @key 'right', 'command shift'
+      idea("range " + first + " " + last)
   'editor:extend-selection-to-line-number': (input) ->
     if input
-      if @getSelectedText()
-        @key 'escape'
-      @openMenuBarPath(['Navigate', 'Line/Column...'])
-      while not @getSelectedText()
-        @delay 15
-        console.log @getSelectedText()
-      # console.log @getSelectedText()
-      copied = _.split @getSelectedText(), ':'
-      @key 'escape'
-      @delay 10
-      currentLineNumber = parseInt(copied[0])
-      target = parseInt(input)
-      distance = Math.abs(currentLineNumber - target)
-      console.log currentLineNumber + ',' + target + ' Distance: ' + distance
-      if distance > 30
-        console.log 'Refusing to select a line that far away'
-        return
-      # console.log '' + copied + ', ' + target
-      if currentLineNumber < target
-        counter = currentLineNumber
-        while counter < target
-          @key 'down', 'shift'
-          #@delay 10
-          @openMenuBarPath(['Code', 'Folding', 'Expand'])
-          #@delay 10
-          counter++
-        @key 'right', 'command shift'
-      else
-        counter = target
-        while counter < currentLineNumber
-          @key 'up', 'shift'
-          #@delay 10
-          @openMenuBarPath(['Code', 'Folding', 'Expand'])
-          #@delay 10
-          counter++
-        @key 'left', 'command shift'
+      idea("extend " + input)
   'editor:select-line-number': (input) ->
-    idea("goto " + input + " 0")
-    @key 'right', 'command shift'
+    idea "goto " + input + " 0", (_) ->
+      idea "action EditorLineEndWithSelection"
   'editor:move-to-line-number-and-way-left': (input) ->
     idea("goto " + input + " 0")
   'editor:move-to-line-number-and-way-right': (input) ->
     idea("goto " + input + " 9999")
   'editor:insert-under-line-number': (input) ->
-    idea("goto " + input + " 9999")
-    @key 'enter'
+    idea "goto " + input + " 9999", (_) ->
+      @key 'enter'
   'editor:list-projects': ->
     # Recent files, not projects.
-    @openMenuBarPath(['View', 'Recent Files'])
+    idea("action RecentFiles")
   'delete:lines': (input) ->
-    console.log Scope.active('intellij')
     if input
-      # Store current position:
-      currentPosition = position()
-      first = input.first
-      if parseInt(first) <= parseInt(currentPosition[0])
-        # Deleting a single line above my line, so we'll have to jump back to a higher line to compensate.
-        currentPosition[0] = '' + (parseInt(currentPosition[0]) - 1)
-      if 'last' in input
-        # No idea how this path would be triggered.
-        @do 'editor:select-line-number-range', '' + first + last
-      else
-        @do 'editor:move-to-line-number', first
-      @delay 100
-      # 'Delete line' has no menu bar item!
-      # Script the longer way: command right, shift command left, delete x2
-      @key 'right', 'command'
-      @delay 25
-      @key 'left', 'command shift'
-      @delay 25
-      @key 'delete'
-      @delay 25
-      @key 'delete'
-      @delay 25
-      # Jump to our exact original position:
-      idea("goto " + currentPosition[0] + " " + currentPosition[1])
+      idea "location", (originalLocationString) ->
+        original = _.split originalLocationString, ' '
+        currentLineNumber = parseInt(original[0])
+        target = parseInt(input)
+        if currentLineNumber > target
+          currentLineNumber = currentLineNumber - 1 # To account for our line moving up.
+        idea "goto " + input + " 0", (_) ->
+          idea "action EditorDeleteLine", (_) ->
+            idea "goto " + currentLineNumber + " " + original[1]
     else
-      # Delete line has no menu bar item!
-      # @key 'delete', 'command'
-      # Script the longer way: command right, shift command left, delete
-      # This has a small advantage in that it matches snipline behavior in other editors by leaving an empty line.
-      @key 'right', 'command'
-      @delay 25
-      @key 'left', 'command shift'
-      @delay 25
-      @key 'delete'
-      @delay 25
+      # snipline with no argument leaves an empty line.
+      # With RPC:
+      idea "action EditorLineEnd", (_) ->
+        idea "action EditorDeleteToLineStart"
+
+      # However, there are dialogs and other things which happen, and I need to know which to use!
+      # @key 'right', 'command'
+      # @delay 25
+      # @key 'left', 'command shift'
+      # @delay 25
+      # @key 'delete'
+      # @delay 25
   'cursor:way-up': ->
     idea("action EditorTextStart")
   'cursor:way-down': ->
     idea("action EditorTextEnd")
   'delete:way-left': ->
-    @key 'left', 'command shift'
-    @key 'delete'
+    idea "action EditorDeleteToLineStart"
+  'delete:way-right': ->
+    idea "action EditorDeleteToLineEnd"
   'selection:way-up': ->
     idea("action EditorTextStartWithSelection")
   'selection:way-down': ->
-    idea("action EditorTextEndWithSelection"
+    idea("action EditorTextEndWithSelection")
   'text-manipulation:move-line-down': ->
     idea("action MoveLineDown")
   'text-manipulation:move-line-up': ->
@@ -286,39 +206,17 @@ pack.implement {scope: 'intellij'},
   'selection:previous-occurrence': (input) ->
     if input?.value?
       term = input?.value
-      @openMenuBarPath(['Edit', 'Find', 'Find...'])
-      @delay 15
-      @paste term
-      @delay 25
-      @openMenuBarPath(['Edit', 'Find', 'Find Previous / Move to Previous Occurrence'])
-      @delay 25
-      @key 'escape'
+      idea("find prev " + term)
   'selection:next-occurrence': (input) ->
     if input?.value?
       term = input?.value
-      @openMenuBarPath(['Edit', 'Find', 'Find...'])
-      @delay 15
-      @key 'Delete'
-      @delay 10
-      @paste term
-      @delay 25
-      # @openMenuBarPath(['Edit', 'Find', 'Find Next / Move to Next Occurrence'])
-      # @delay 25
-      @key 'escape'
+      idea("find next " + term)
   'selection:next-selection-occurrence': ->
     if @getSelectedText()
-      @openMenuBarPath(['Edit', 'Find', 'Find...'])
-      @delay 15
-      @openMenuBarPath(['Edit', 'Find', 'Find Next / Move to Next Occurrence'])
-      @delay 15
-      @key 'escape'
+      idea("find next " + @getSelectedText())
   'selection:previous-selection-occurrence': ->
     if @getSelectedText()
-      @openMenuBarPath(['Edit', 'Find', 'Find...'])
-      @delay 15
-      @openMenuBarPath(['Edit', 'Find', 'Find Previous / Move to Previous Occurrence'])
-      @delay 15
-      @key 'escape'
+      idea("find prev " + @getSelectedText())
   'delete:partial-word': ->
     idea("action EditorDeleteToWordStartInDifferentHumpsMode")
   'delete:partial-word-forward': ->
@@ -382,8 +280,6 @@ pack.commands
     spoken: 'idea fix this'
     description: 'Open quick fix dialog'
     action: ->
-      # 'Show intention actions' has no menu item!
-      # Luckily, this is identical in both OS X keymaps, but added to settings just in case.
       if Scope.active('intellij')
         idea("action ShowIntentionActions")
 
@@ -449,3 +345,10 @@ pack.commands
     action: ->
       if Scope.active('intellij')
         idea("action EditorUnSelectWord")
+
+  'intellij-show-error':
+    spoken: 'idea error description'
+    description: 'Show error description at cursor'
+    action: ->
+      if Scope.active('intellij')
+        idea("action ShowErrorDescription")
